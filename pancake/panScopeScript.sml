@@ -57,6 +57,9 @@ Definition scope_check_prog_def:
   scope_check_prog ctxt (Dec v e p) =
     do
       scope_check_exp ctxt e;
+      if MEM v ctxt.vars
+        then return ()
+      else log (concat [strlit "variable "; v; strlit " redeclared in "; ctxt.fname; strlit "\n"]);
       scope_check_prog (ctxt with vars := v :: ctxt.vars) p
     od ∧
   scope_check_prog ctxt (DecCall v s e args p) =
