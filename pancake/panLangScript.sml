@@ -20,6 +20,8 @@ Type shift = ``:ast$shift``
 
 Type sname = ``:mlstring``
 
+Type fldname = ``:mlstring``
+
 Type varname = ``:mlstring``
 
 Type funname = ``:mlstring``
@@ -33,6 +35,7 @@ Type index = ``:num``
 Datatype:
   shape = One
         | Comb (shape list)
+        | Named sname
 End
 
 Datatype:
@@ -46,8 +49,10 @@ End
 Datatype:
   exp = Const ('a word)
       | Var varkind varname
-      | Struct (exp list)
-      | Field index exp
+      | RStruct (exp list)
+      | RField index exp
+      | NStruct sname ((fldname # exp) list)
+      | NField fldname exp
       | Load shape exp (* exp: start addr of value with given shape *)
       | Load32 exp
       | LoadByte exp
@@ -101,6 +106,14 @@ End
 Datatype:
   decl = Function ('a fun_decl)
        | Decl shape mlstring ('a exp)
+       | Name sname ((fldname # shape) list)
+End
+
+Datatype:
+  struct_info =
+  <| fields : (fldname # shape) list
+  ;  size   : num (* ??? *)
+  |>
 End
 
 Overload TailCall = “Call NONE”
@@ -115,20 +128,48 @@ Proof
   res_tac >> decide_tac
 QED
 
+Definition is_wf_shape_def:
+  is_wf_shape ctxt One = T /\
+  is_wf_shape ctxt (Comb shs) = EVERY (is_wf_shape ctxt) shs /\
+  is_wf_shape ctxt (Named nm) =
+    case ALOOKUP ctxt nm of
+    | SOME flds => T
+    | NONE => F
+End
+
+Definition is_wf_flds_def:
+  is_wf_flds ctxt [] = T /\
+  is_wf_flds ctxt ((fld,sh)::flds) =
+    (is_wf_shape ctxt sh /\ is_wf_flds ctxt flds)
+End
+
+Definition is_wf_ctxt_def:
+  is_wf_ctxt [] = T /\
+  is_wf_ctxt ((nm,info)::ctxt') = (
+    (ALOOKUP ctxt' nm = NONE) /\
+    (is_wf_flds ctxt' info.fields) /\
+    (is_wf_ctxt ctxt')
+  )
+End
 
 Definition size_of_shape_def:
-  size_of_shape One = 1 /\
-  size_of_shape (Comb shapes) = SUM (MAP size_of_shape shapes)
-Termination
-  wf_rel_tac `measure shape_size` >>
-  fs [MEM_IMP_shape_size]
+  size_of_shape ctxt One = 1 /\
+  size_of_shape ctxt (Comb shapes) = SUM (MAP (size_of_shape ctxt) shapes) /\
+  size_of_shape ctxt (Named name) =
+    case ALOOKUP ctxt name of
+    | SOME info => info.size
+    | NONE => 1 (* neither context nor Named should appear in pan_to_crep *)
 End
 
 Theorem MEM_IMP_exp_size:
-   !xs a. MEM a xs ==> (exp_size l a < exp1_size l xs)
+  (!xs a. MEM a xs ==> (exp_size l a < exp3_size l xs)) ∧
+  (!xs a. MEM a xs ==> (exp_size l (SND a) < exp1_size l xs))
 Proof
-  Induct \\ FULL_SIMP_TAC (srw_ss()) []
+  rpt conj_tac \\ Induct \\ FULL_SIMP_TAC (srw_ss()) []
   \\ REPEAT STRIP_TAC \\ SRW_TAC [] [definition"exp_size_def"]
+  \\ RES_TAC \\ TRY DECIDE_TAC
+  \\ Cases_on ‘a’
+  \\ fs [definition "exp_size_def"]
   \\ RES_TAC \\ DECIDE_TAC
 QED
 
@@ -141,7 +182,7 @@ End
 Definition with_shape_def:
   (with_shape [] _ = []) ∧
   (with_shape (sh::shs) e =
-     TAKE (size_of_shape sh) e :: with_shape shs (DROP (size_of_shape sh) e))
+     TAKE (size_of_shape [] sh) e :: with_shape shs (DROP (size_of_shape [] sh) e))
 End
 
 Definition exp_ids_def:
@@ -183,8 +224,10 @@ Definition var_exp_def:
   (var_exp (Const w) = ([]:mlstring list)) ∧
   (var_exp (Var Local v) = [v]) ∧
   (var_exp (Var Global v) = []) ∧
-  (var_exp (Struct es) = FLAT (MAP var_exp es)) ∧
-  (var_exp (Field i e) = var_exp e) ∧
+  (var_exp (RStruct es) = FLAT (MAP var_exp es)) ∧
+  (var_exp (RField i e) = var_exp e) ∧
+  (var_exp (NStruct sn fes) = FLAT (MAP (var_exp o SND) fes)) ∧
+  (var_exp (NField fld e) = var_exp e) ∧
   (var_exp (Load sh e) = var_exp e) ∧
   (var_exp (Load32 e) = var_exp e) ∧
   (var_exp (LoadByte e) = var_exp e) ∧
@@ -207,8 +250,10 @@ Definition global_var_exp_def:
   (global_var_exp (Const w) = ([]:mlstring list)) ∧
   (global_var_exp (Var Local v) = []) ∧
   (global_var_exp (Var Global v) = [v]) ∧
-  (global_var_exp (Struct es) = FLAT (MAP global_var_exp es)) ∧
-  (global_var_exp (Field i e) = global_var_exp e) ∧
+  (global_var_exp (RStruct es) = FLAT (MAP global_var_exp es)) ∧
+  (global_var_exp (RField i e) = global_var_exp e) ∧
+  (global_var_exp (NStruct sn fes) = FLAT (MAP (global_var_exp o SND) fes)) ∧
+  (global_var_exp (NField fld e) = global_var_exp e) ∧
   (global_var_exp (Load sh e) = global_var_exp e) ∧
   (global_var_exp (LoadByte e) = global_var_exp e) ∧
   (global_var_exp (Op bop es) = FLAT (MAP global_var_exp es)) ∧
@@ -246,7 +291,8 @@ Definition functions_def:
   functions [] = [] ∧
   functions(Function fi::fs) =
   (fi.name,fi.params,fi.body)::functions fs ∧
-  functions(Decl _ _ _::fs) = functions fs
+  functions(Decl _ _ _::fs) = functions fs ∧
+  functions(Name _ _::fs) = functions fs
 End
 
 Definition fun_ids_def:
