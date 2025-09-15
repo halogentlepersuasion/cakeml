@@ -25,11 +25,11 @@ Definition cexp_heads_def:
    | x::xs, SOME ys => SOME (x::ys))
 End
 
-Definition comp_field_def:
+Definition comp_field_def: (* #!TODO *)
   (comp_field i [] es = ([Const 0w], One)) ∧
   (comp_field i (sh::shs) es =
-   if i = (0:num) then (TAKE (size_of_shape sh) es, sh)
-   else comp_field (i-1) shs (DROP (size_of_shape sh) es))
+   if i = (0:num) then (TAKE (size_of_shape [] sh) es, sh)
+   else comp_field (i-1) shs (DROP (size_of_shape [] sh) es))
 End
 
 Definition compile_panop_def:
@@ -37,6 +37,7 @@ Definition compile_panop_def:
 End
 
 Definition compile_exp_def:
+  (* #!TODO: NStruct, NField *)
   (compile_exp ctxt ((Const c):'a panLang$exp) =
    ([(Const c): 'a crepLang$exp], One)) /\
   (compile_exp ctxt (Var Local vname) =
@@ -44,10 +45,10 @@ Definition compile_exp_def:
    | SOME (shape, ns) => (MAP Var ns, shape)
    | NONE => ([Const 0w], One)) /\
   (compile_exp ctxt (Var Global vname) = ([Const 0w], One)) /\ (* should never happen *)
-  (compile_exp ctxt (Struct es) =
+  (compile_exp ctxt (RStruct es) =
    let cexps = MAP (compile_exp ctxt) es in
    (FLAT (MAP FST cexps), Comb (MAP SND cexps))) /\
-  (compile_exp ctxt (Field index e) =
+  (compile_exp ctxt (RField index e) =
    let (cexp, shape) = compile_exp ctxt e in
    case shape of
    | One => ([Const 0w], One)
@@ -55,7 +56,7 @@ Definition compile_exp_def:
   (compile_exp ctxt (Load sh e) =
    let (cexp, shape) = compile_exp ctxt e in
    case cexp of
-   | e::es => (load_shape (0w) (size_of_shape sh) e, sh)
+   | e::es => (load_shape (0w) (size_of_shape [] sh) e, sh) (* #!TODO *)
    | _ => ([Const 0w], One)) /\
   (compile_exp ctxt (Load32 e) =
    let (cexp, shape) = compile_exp ctxt e in
@@ -107,17 +108,17 @@ Definition exp_hdl_def:
       (MAP2 Assign ns (load_globals 0w (LENGTH ns)))
 End
 
-Definition ret_var_def:
+Definition ret_var_def: (* #!TODO *)
   (ret_var One ns = oHD ns) /\
   (ret_var (Comb sh) ns =
-     if size_of_shape (Comb sh) = 1 then oHD ns
+     if size_of_shape [] (Comb sh) = 1 then oHD ns
      else NONE)
 End
 
-Definition ret_hdl_def:
+Definition ret_hdl_def: (* #!TODO *)
    (ret_hdl One ns = Skip) /\
    (ret_hdl (Comb sh) ns =
-     if 1 < size_of_shape (Comb sh) then (assign_ret ns)
+     if 1 < size_of_shape [] (Comb sh) then (assign_ret ns)
      else Skip)
 End
 
@@ -132,13 +133,13 @@ End
 
 Definition compile_def:
   (compile _ (Skip:'a panLang$prog) = (Skip:'a crepLang$prog)) /\
-  (compile ctxt (Dec v s e p) =
+  (compile ctxt (Dec v s e p) = (* #!TODO *)
    let (es, sh) = compile_exp ctxt e;
        vmax = ctxt.vmax;
-       nvars = GENLIST (λx. vmax + SUC x) (size_of_shape sh);
+       nvars = GENLIST (λx. vmax + SUC x) (size_of_shape [] sh);
        nctxt = ctxt with  <|vars := ctxt.vars |+ (v, (sh, nvars));
-                            vmax := ctxt.vmax + size_of_shape sh|> in
-            if size_of_shape sh = LENGTH es
+                            vmax := ctxt.vmax + size_of_shape [] sh|> in
+            if size_of_shape [] sh = LENGTH es
             then nested_decs nvars es (compile nctxt p)
             else Skip) /\
   (compile ctxt (Assign Local v e) =
@@ -155,13 +156,13 @@ Definition compile_def:
       else Skip:'a crepLang$prog
     | NONE => Skip) /\
   (compile ctxt (Assign Global v e) = Skip) /\
-  (compile ctxt (Store ad v) =
+  (compile ctxt (Store ad v) = (* #!TODO *)
    case compile_exp ctxt ad of
     | (e::es',sh') =>
        let (es,sh) = compile_exp ctxt v;
             adv = ctxt.vmax + 1;
-            temps = GENLIST (λx. adv + SUC x) (size_of_shape sh) in
-            if size_of_shape sh = LENGTH es
+            temps = GENLIST (λx. adv + SUC x) (size_of_shape [] sh) in
+            if size_of_shape [] sh = LENGTH es
             then nested_decs (adv::temps) (e::es)
                  (nested_seq (stores (Var adv) (MAP Var temps) 0w))
             else Skip
@@ -174,23 +175,23 @@ Definition compile_def:
    case (compile_exp ctxt dest, compile_exp ctxt src) of
     | (ad::ads, _), (e::es, _) => StoreByte ad e
     | _ => Skip) /\
-  (compile ctxt (Return rt) =
+  (compile ctxt (Return rt) = (* #!TODO *)
    let (ces,sh) = compile_exp ctxt rt in
-   if size_of_shape sh = 0 then Return (Const 0w)
+   if size_of_shape [] sh = 0 then Return (Const 0w)
    else case ces of
          | [] => Skip
-         | e::es => if size_of_shape sh = 1 then (Return e) else
-          let temps = GENLIST (λx. ctxt.vmax + SUC x) (size_of_shape sh) in
-           if size_of_shape sh = LENGTH (e::es)
+         | e::es => if size_of_shape [] sh = 1 then (Return e) else
+          let temps = GENLIST (λx. ctxt.vmax + SUC x) (size_of_shape [] sh) in
+           if size_of_shape [] sh = LENGTH (e::es)
            then Seq (nested_decs temps (e::es)
                                  (nested_seq (store_globals 0w (MAP Var temps)))) (Return (Const 0w))
         else Skip) /\
-  (compile ctxt (Raise eid excp) =
+  (compile ctxt (Raise eid excp) = (* #!TODO *)
     case FLOOKUP ctxt.eids eid of
     | SOME n =>
       let (ces,sh) = compile_exp ctxt excp;
-          temps = GENLIST (λx. ctxt.vmax + SUC x) (size_of_shape sh) in
-       if size_of_shape sh = LENGTH ces
+          temps = GENLIST (λx. ctxt.vmax + SUC x) (size_of_shape [] sh) in
+       if size_of_shape [] sh = LENGTH ces
        then Seq (nested_decs temps ces (nested_seq (store_globals 0w (MAP Var temps))))
                 (Raise n)
        else Skip
@@ -248,14 +249,14 @@ Definition compile_def:
                             hndlr = Seq (exp_hdl ctxt.vars evar) comp_hdl in
                           Call (SOME ((ret_var sh ns), (ret_hdl sh ns),
                                       (SOME (neid, hndlr)))) ce args)))) /\
-  (compile ctxt (DecCall v s ce es p) =
+  (compile ctxt (DecCall v s ce es p) = (* #!TODO *)
    let
      cexps = MAP (compile_exp ctxt) es;
      args = FLAT (MAP FST cexps);
      vmax = ctxt.vmax;
-     nvars = GENLIST (λx. vmax + SUC x) (size_of_shape s);
+     nvars = GENLIST (λx. vmax + SUC x) (size_of_shape [] s);
      nctxt = ctxt with  <|vars := ctxt.vars |+ (v, (s, nvars));
-                          vmax := ctxt.vmax + size_of_shape s|> in
+                          vmax := ctxt.vmax + size_of_shape [] s|> in
      case wrap_rt (SOME(s,nvars)) of
        NONE => Call (SOME (NONE, compile nctxt p, NONE)) ce args
      | SOME(sh,ns) =>
@@ -327,7 +328,7 @@ Definition make_vmap_def:
   make_vmap params =
    let pvars  = MAP FST params;
        shs = MAP SND params;
-       ns  = GENLIST I (size_of_shape (Comb shs));
+       ns  = GENLIST I (size_of_shape [] (Comb shs)); (* #!TODO *)
        (* defining in this way to make proof in sync with "with_shape" *)
        cvars = ZIP (shs, with_shape shs ns) in
     FEMPTY |++ ZIP (pvars, cvars)
@@ -337,7 +338,7 @@ Definition comp_func_def:
   comp_func fs eids params body =
     let vmap   = make_vmap params;
         shapes = MAP SND params;
-        vmax = size_of_shape (Comb shapes) - 1 in
+        vmax = size_of_shape [] (Comb shapes) - 1 in (* #!TODO *)
     compile (mk_ctxt vmap fs vmax eids) body
 End
 
@@ -361,7 +362,7 @@ End
 Definition crep_vars_def:
   crep_vars params =
   let shapes = MAP SND params;
-      len    = size_of_shape (Comb shapes) in
+      len    = size_of_shape [] (Comb shapes) in (* #!TODO *)
       GENLIST I len
 End
 
