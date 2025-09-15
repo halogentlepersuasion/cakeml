@@ -21,9 +21,12 @@ Definition compile_exp_def:
    case FLOOKUP ctxt.globals vname of
      NONE => Const 0w (* should never happen *)
    | SOME(sh,addr) => Load sh (Op Sub [TopAddr; Const addr])) ∧
-  (compile_exp ctxt (Struct es) = Struct (MAP (compile_exp ctxt) es)) ∧
-  (compile_exp ctxt (Field index e) =
-   Field index (compile_exp ctxt e)) ∧
+  (compile_exp ctxt (RStruct es) = RStruct (MAP (compile_exp ctxt) es)) ∧
+  (compile_exp ctxt (RField index e) =
+   RField index (compile_exp ctxt e)) ∧
+  (compile_exp ctxt (NStruct nm flds) = NStruct nm (MAP (\(fld, e). (fld, compile_exp ctxt e)) flds)) ∧
+  (compile_exp ctxt (NField fld e) =
+   NField fld (compile_exp ctxt e)) ∧
   (compile_exp ctxt (Load sh e) =
    Load sh (compile_exp ctxt e)) ∧
   (compile_exp ctxt (LoadByte e) =
@@ -64,7 +67,7 @@ End
 
 Definition shape_val_def:
   shape_val One = Const 0w ∧
-  shape_val (Comb shapes) = Struct (shape_vals shapes) ∧
+  shape_val (Comb shapes) = RStruct (shape_vals shapes) ∧
   shape_vals [] = [] ∧
   shape_vals (sh::shs) = shape_val sh :: shape_vals shs
 End
@@ -162,7 +165,7 @@ Definition compile_decs_def:
     compile_decs ctxt [] = ([],[],ctxt) ∧
     (compile_decs ctxt (Decl sh v e::ds) =
      let
-       s = ctxt.globals_size + bytes_in_word*n2w(size_of_shape sh);
+       s = ctxt.globals_size + bytes_in_word*n2w(size_of_shape [] sh); (* #!TODO *)
        ctxt' = ctxt with <|globals  := ctxt.globals |+ (v,sh,s);
                            globals_size := s|>;
        (decs,funs,ctxt'') = compile_decs ctxt' ds
@@ -238,7 +241,7 @@ Definition compile_top_def:
           nds' = fperm_decs start start' nds;
           (decls,funs,ctxt) = compile_decs
                               <| globals := FEMPTY; globals_size := 0w;
-                                 max_globals_size := bytes_in_word*n2w(SUM(MAP size_of_shape(dec_shapes nds')))
+                                 max_globals_size := bytes_in_word*n2w(SUM(MAP (size_of_shape []) (dec_shapes nds')))  (* #!TODO *)
                               |> nds';
           params = MAP (Var Local o FST) args;
           new_main = Function <| name   := start
