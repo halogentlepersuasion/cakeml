@@ -133,6 +133,7 @@ Definition varkind_to_str_def:
 End
 
 Definition pan_exp_to_display_def:
+  (* #!TODO: NStruct, NField *)
   (pan_exp_to_display (panLang$Const v)
     = item_with_word (strlit "Const") v) ∧
   (pan_exp_to_display (Var vk n)
@@ -153,8 +154,8 @@ Definition pan_exp_to_display_def:
     = Item NONE (strlit "MemLoad32") [pan_exp_to_display exp2]) ∧
   (pan_exp_to_display (panLang$LoadByte exp2)
     = Item NONE (strlit "MemLoadByte") [pan_exp_to_display exp2]) ∧
-  (pan_exp_to_display (Struct xs)
-    = Item NONE (strlit "Struct") (MAP pan_exp_to_display xs)) ∧
+  (pan_exp_to_display (RStruct xs)
+    = Item NONE (strlit "RawStruct") (MAP pan_exp_to_display xs)) ∧
   (pan_exp_to_display (Cmp cmp x1 x2)
     = insert_es (asm_cmp_to_display cmp)
                 [pan_exp_to_display x1; pan_exp_to_display x2]) ∧
@@ -163,8 +164,8 @@ Definition pan_exp_to_display_def:
   (pan_exp_to_display (Panop p xs)
     = case p of
       | Mul => Item NONE (strlit "Mul") (MAP pan_exp_to_display xs)) ∧
-  (pan_exp_to_display (Field n e)
-    = Item NONE (strlit "Field") [num_to_display n; pan_exp_to_display e]) ∧
+  (pan_exp_to_display (RField n e)
+    = Item NONE (strlit "RawField") [num_to_display n; pan_exp_to_display e]) ∧
   (pan_exp_to_display (Shift sh e n)
     = insert_es (shift_to_display sh) [pan_exp_to_display e; num_to_display n])
 End
