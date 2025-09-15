@@ -599,14 +599,14 @@ Definition static_check_exp_def:
       (* return exp info with stored shape *)
       return <| sh_bd := sh_bd_from_sh Trusted vinf.vshape |>
     od ∧
-  static_check_exp ctxt (Struct es) =
+  static_check_exp ctxt (RStruct es) =
     do
       (* check struct field exps *)
       esret <- static_check_exps ctxt es;
       (* return exp info with found shape *)
       return <| sh_bd := StructB esret.sh_bds |>
     od ∧
-  static_check_exp ctxt (Field index e) =
+  static_check_exp ctxt (RField index e) =
     do
       (* check struct exp *)
       eret <- static_check_exp ctxt e;
@@ -617,6 +617,7 @@ Definition static_check_exp_def:
       (* return exp info with found shape *)
       | SOME sb => return <| sh_bd := sb |>
     od ∧
+  (* #!TODO: NStruct, NField*)
   static_check_exp ctxt (Load shape addr) =
     do
       (* check addr exp *)
@@ -1368,7 +1369,8 @@ Definition static_check_decls_def:
             od
           else
             (* check func return shape size *)
-            if size_of_shape fi.return > 32
+            (* #!TODO *)
+            if size_of_shape [] fi.return > 32
               then error (ShapeErr $ concat
                 [strlit "function "; fi.name;
                 strlit " returns a shape bigger than 32 words\n"])
