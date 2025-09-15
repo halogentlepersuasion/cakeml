@@ -250,15 +250,16 @@ Definition conv_Exp_def:
       SOME (t::ts) => OPT_MMAP conv_Exp (t::ts)
     | _ => NONE) ∧
   (conv_Exp (Nd nodeNT args) =
+    (* #!TODO: NStruct, NField*)
     if isNT nodeNT EBaseNT then
       case args of
         [] => NONE
       | [t] => conv_const t ++ conv_var t ++ conv_Exp t
-      | t::ts => FOLDL (λe t. lift2 Field (conv_nat t) e) (conv_var t ++ conv_Exp t) ts
+      | t::ts => FOLDL (λe t. lift2 RField (conv_nat t) e) (conv_var t ++ conv_Exp t) ts
     else if isNT nodeNT StructNT then
       case args of
         [ts] => do es <- conv_ArgList ts;
-                   SOME $ Struct es
+                   SOME $ RStruct es
                 od
       | _ => NONE
     else if isNT nodeNT NotNT then
@@ -755,9 +756,11 @@ Definition localise_exp_def:
    case lookup ls varname of
      NONE   => Var varkind varname
    | SOME _ => Var Local varname) ∧
-  localise_exp ls (Struct exps) = Struct (localise_exps ls exps) ∧
-  localise_exp ls (Field index exp) = Field index (localise_exp ls exp) ∧
-  localise_exp ls (Load shape exp) = Load shape (localise_exp ls exp)∧
+  localise_exp ls (RStruct exps) = RStruct (localise_exps ls exps) ∧
+  localise_exp ls (RField index exp) = RField index (localise_exp ls exp) ∧
+  localise_exp ls (NStruct nm flds) = NStruct nm (MAP (\fld, e. (fld, localise_exp ls e)) flds) ∧
+  localise_exp ls (NField fld exp) = NField fld (localise_exp ls exp) ∧
+  localise_exp ls (Load shape exp) = Load shape (localise_exp ls exp) ∧
   localise_exp ls (LoadByte exp) = LoadByte (localise_exp ls exp) ∧
   localise_exp ls (Op binop exps) = Op binop (localise_exps ls exps) ∧
   localise_exp ls (Panop panop exps) = Panop panop (localise_exps ls exps) ∧
