@@ -25,7 +25,7 @@ Datatype:
             | EXorNT | EOrNT | EAndNT
             | EShiftNT | EAddNT | EMulNT
             | EBaseNT | StructNT
-            | ShapeNT | ShapeCombNT
+            | ShapedIdentNT | ShapeNT | ShapeCombNT
             | EqOpsNT | CmpOpsNT | ShiftOpsNT | AddOpsNT | MulOpsNT
             | SharedLoadNT | SharedLoadByteNT | SharedLoad16NT | SharedLoad32NT
             | SharedStoreNT | SharedStoreByteNT | SharedStore16NT | SharedStore32NT
@@ -146,8 +146,7 @@ Definition pancake_peg_def[nocompute]:
                                  seql [keep_annot; mknt TopDecListNT] (mksubtree TopDecListNT)]);
         (INL FunNT, seql [try_default (keep_kw ExportK) StaticT;
                           consume_kw FunK;
-                          try_default (mknt ShapeNT) DefaultShT;
-                          keep_ident;
+                          mknt ShapedIdentNT;
                           consume_tok LParT;
                           choicel
                           [mknt ParamListNT;
@@ -157,10 +156,9 @@ Definition pancake_peg_def[nocompute]:
                           consume_tok LCurT;
                           try_ProgNT]
                           (mksubtree FunNT));
-        (INL ParamListNT, seql [try_default (mknt ShapeNT) DefaultShT; keep_ident;
+        (INL ParamListNT, seql [mknt ShapedIdentNT;
                                 rpt (seql [consume_tok CommaT;
-                                           try_default (mknt ShapeNT) DefaultShT;
-                                           keep_ident] I)
+                                           mknt ShapedIdentNT] I)
                                            FLAT]
                                (mksubtree ParamListNT));
         (INL ProgNT, choicel [seql [mknt BlockNT; mknt ProgNT] (mksubtree ProgNT);
@@ -191,16 +189,16 @@ Definition pancake_peg_def[nocompute]:
                               keep_kw TicK;
                               seql [consume_tok LCurT; try_ProgNT] I
                               ]);
-        (INL DecCallNT, seql [consume_kw VarK; try_default (mknt ShapeNT) DefaultShT; keep_ident; consume_tok AssignT;
+        (INL DecCallNT, seql [consume_kw VarK; mknt ShapedIdentNT; consume_tok AssignT;
                               keep_ident;
                               consume_tok LParT; try (mknt ArgListNT);
                               consume_tok RParT;consume_tok SemiT]
                           (mksubtree DecCallNT));
-        (INL DecNT,seql [consume_kw VarK; try_default (mknt ShapeNT) DefaultShT; keep_ident;
+        (INL DecNT, seql [consume_kw VarK; mknt ShapedIdentNT;
                          consume_tok AssignT; mknt ExpNT;
                          consume_tok SemiT]
                          (mksubtree DecNT));
-        (INL GlobalDecNT,seql [consume_kw VarK; try_default (mknt ShapeNT) DefaultShT; keep_ident;
+        (INL GlobalDecNT, seql [consume_kw VarK; mknt ShapedIdentNT;
                          consume_tok AssignT; mknt ExpNT;
                          consume_tok SemiT]
                          (mksubtree GlobalDecNT));
@@ -321,6 +319,11 @@ Definition pancake_peg_def[nocompute]:
         (INL StructNT, seql [consume_tok LessT; mknt ArgListNT;
                              consume_tok GreaterT]
                             (mksubtree StructNT));
+        (INL ShapedIdentNT, choicel [seql [mknt ShapeNT;
+                                           keep_ident] I;
+                                     seql [empty $ mkleaf (DefaultShT, unknown_loc);
+                                           keep_ident] I
+                                    ]);
         (INL ShapeNT, choicel [keep_int;
                                seql [consume_tok LCurT;
                                      mknt ShapeCombNT;
@@ -668,7 +671,7 @@ end
 
 val topo_nts = [“MulOpsNT”, “AddOpsNT”, “ShiftOpsNT”, “CmpOpsNT”,
                 “EqOpsNT”, “ShapeNT”,
-                “ShapeCombNT”, “NotNT”, “StructNT”,
+                “ShapeCombNT”, “ShapedIdentNT”, “NotNT”, “StructNT”,
                 “EBaseNT”, “EMulNT”, “EAddNT”, “EShiftNT”, “EAndNT”, “EXorNT”, “EOrNT”,
                 “ELoad32NT”, “ELoadByteNT”, “ELoadNT”, “ECmpNT”, “EEqNT”, “EBoolAndNT”,
                 “ExpNT”, “ArgListNT”, “ReturnNT”,
