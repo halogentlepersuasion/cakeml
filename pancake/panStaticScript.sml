@@ -1370,7 +1370,7 @@ Definition static_check_decls_def:
           else
             (* check func return shape size *)
             (* #!TODO *)
-            if size_of_shape [] fi.return > 32
+            if size_of_shape fi.return > 32
               then error (ShapeErr $ concat
                 [strlit "function "; fi.name;
                 strlit " returns a shape bigger than 32 words\n"])

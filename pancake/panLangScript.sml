@@ -18,7 +18,7 @@ Libs
 
 Type shift = ``:ast$shift``
 
-Type sname = ``:mlstring``
+Type stcname = ``:mlstring``
 
 Type fldname = ``:mlstring``
 
@@ -35,7 +35,7 @@ Type index = ``:num``
 Datatype:
   shape = One
         | Comb (shape list)
-        | Named sname
+        | Named stcname
 End
 
 Datatype:
@@ -51,7 +51,7 @@ Datatype:
       | Var varkind varname
       | RStruct (exp list)
       | RField index exp
-      | NStruct sname ((fldname # exp) list)
+      | NStruct stcname ((fldname # exp) list)
       | NField fldname exp
       | Load shape exp (* exp: start addr of value with given shape *)
       | Load32 exp
@@ -106,7 +106,7 @@ End
 Datatype:
   decl = Function ('a fun_decl)
        | Decl shape mlstring ('a exp)
-       | Name sname ((fldname # shape) list)
+       | Name stcname ((fldname # shape) list)
 End
 
 Datatype:
@@ -152,13 +152,21 @@ Definition is_wf_ctxt_def:
   )
 End
 
-Definition size_of_shape_def:
-  size_of_shape ctxt One = 1 /\
-  size_of_shape ctxt (Comb shapes) = SUM (MAP (size_of_shape ctxt) shapes) /\
-  size_of_shape ctxt (Named name) =
+(* For passes with Nameds *)
+Definition size_of_sh_with_ctxt_def:
+  size_of_sh_with_ctxt ctxt One = 1 /\
+  size_of_sh_with_ctxt ctxt (Comb shapes) = SUM (MAP (size_of_sh_with_ctxt ctxt) shapes) /\
+  size_of_sh_with_ctxt ctxt (Named name) =
     case ALOOKUP ctxt name of
     | SOME info => info.size
-    | NONE => 1 (* neither context nor Named should appear in pan_to_crep *)
+    | NONE => 1 (* should not happen *)
+End
+
+(* For passes after Nameds are compiled away eg pan_to_crep *)
+Definition size_of_shape_def:
+  size_of_shape One = 1 /\
+  size_of_shape (Comb shapes) = SUM (MAP size_of_shape shapes) /\
+  size_of_shape (Named name) = 1 (* should not happen *)
 End
 
 Theorem MEM_IMP_exp_size:
@@ -182,7 +190,7 @@ End
 Definition with_shape_def:
   (with_shape [] _ = []) ∧
   (with_shape (sh::shs) e =
-     TAKE (size_of_shape [] sh) e :: with_shape shs (DROP (size_of_shape [] sh) e))
+     TAKE (size_of_shape sh) e :: with_shape shs (DROP (size_of_shape sh) e))
 End
 
 Definition exp_ids_def:
