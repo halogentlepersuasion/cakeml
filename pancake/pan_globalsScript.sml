@@ -165,7 +165,7 @@ Definition compile_decs_def:
     compile_decs ctxt [] = ([],[],ctxt) ∧
     (compile_decs ctxt (Decl sh v e::ds) =
      let
-       s = ctxt.globals_size + bytes_in_word*n2w(size_of_shape [] sh); (* #!TODO *)
+       s = ctxt.globals_size + bytes_in_word*n2w(size_of_shape sh);
        ctxt' = ctxt with <|globals  := ctxt.globals |+ (v,sh,s);
                            globals_size := s|>;
        (decs,funs,ctxt'') = compile_decs ctxt' ds
@@ -241,7 +241,7 @@ Definition compile_top_def:
           nds' = fperm_decs start start' nds;
           (decls,funs,ctxt) = compile_decs
                               <| globals := FEMPTY; globals_size := 0w;
-                                 max_globals_size := bytes_in_word*n2w(SUM(MAP (size_of_shape []) (dec_shapes nds')))  (* #!TODO *)
+                                 max_globals_size := bytes_in_word*n2w(SUM(MAP size_of_shape (dec_shapes nds')))
                               |> nds';
           params = MAP (Var Local o FST) args;
           new_main = Function <| name   := start
