@@ -22,7 +22,7 @@ Definition pan_to_target_all_def:
     let
       prog1:'a decl list = case SPLITP (λx. case x of
                             Function fi => fi.name = «main»
-                          | Decl _ _ _ => F) prog of
+                          | _ => F) prog of
               | ([],ys) => ys
               | (xs,[]) => Function
                             <| name := «main»
