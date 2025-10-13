@@ -112,7 +112,7 @@ End
 Datatype:
   struct_info =
   <| fields : (fldname # shape) list
-  ;  size   : num (* ??? *)
+  ;  size   : num
   |>
 End
 
