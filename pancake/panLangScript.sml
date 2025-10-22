@@ -169,6 +169,16 @@ Definition size_of_shape_def:
   size_of_shape (Named name) = 1 (* should not happen *)
 End
 
+Definition shape_to_str_def:
+  shape_to_str One = strlit "1" ∧
+  shape_to_str (Comb []) = strlit "<>" ∧
+  shape_to_str (Comb (x::xs)) =
+    concat (strlit "<" :: shape_to_str x ::
+            MAP (λx. strlit "," ^ x) (MAP shape_to_str xs) ++
+            [strlit ">"]) ∧
+  shape_to_str (Named nm) = nm
+End
+
 Theorem MEM_IMP_exp_size:
   (!xs a. MEM a xs ==> (exp_size l a < exp3_size l xs)) ∧
   (!xs a. MEM a xs ==> (exp_size l (SND a) < exp1_size l xs))

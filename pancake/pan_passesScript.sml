@@ -104,15 +104,6 @@ QED
 
 (* pan *)
 
-Definition shape_to_str_def:
-  shape_to_str One = strlit "1" ∧
-  shape_to_str (Comb []) = strlit "<>" ∧
-  shape_to_str (Comb (x::xs)) =
-    concat (strlit "<" :: shape_to_str x ::
-            MAP (λx. strlit "," ^ x) (MAP shape_to_str xs) ++
-            [strlit ">"])
-End
-
 Definition opsize_to_display_def:
   opsize_to_display Op8 = empty_item (strlit "byte") ∧
   opsize_to_display Op16 = empty_item (strlit "word16") ∧
