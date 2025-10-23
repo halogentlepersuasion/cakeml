@@ -750,12 +750,17 @@ Definition evaluate_stcnames_def:
   evaluate_stcnames ^s [] =
     SOME s ∧
   evaluate_stcnames s (Name nm flds::ds) =
-    (let shs = MAP SND flds in
-    if EVERY (is_wf_shape s.structs) shs then
-      let info = <| fields := flds
-                  ; size := size_of_sh_with_ctxt s.structs (Comb shs) |> in
-        evaluate_stcnames (s with structs := (nm,info)::s.structs) ds
-    else NONE) ∧
+    (case ALOOKUP s.structs nm of
+    | SOME info => NONE
+    | NONE =>
+      if ALL_DISTINCT $ MAP FST flds then
+        let shs = MAP SND flds in
+        if EVERY (is_wf_shape s.structs) shs then
+          let info = <| fields := flds
+                      ; size := size_of_sh_with_ctxt s.structs (Comb shs) |> in
+            evaluate_stcnames (s with structs := (nm,info)::s.structs) ds
+        else NONE
+      else NONE) ∧
   evaluate_stcnames s (Decl sh v e::ds) =
     (evaluate_stcnames s ds) ∧
   evaluate_stcnames s (Function fi::ds) =
