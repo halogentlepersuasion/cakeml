@@ -38,7 +38,9 @@ Definition pan_to_target_all_def:
         ps = [(«initial pancake program»,Pan prog1)];
         prog_a0 = pan_simp$compile_prog prog1;
         ps = ps ++ [(«after pan_simp»,Pan prog_a0)];
-        prog_a = pan_globals$compile_top prog_a0 «main»;
+        prog_a1 = pan_structs$compile_top prog_a0;
+        ps = ps ++ [(«after pan_structs»,Pan prog_a1)];
+        prog_a = pan_globals$compile_top prog_a1 «main»;
         ps = ps ++ [(«after pan_globals»,Pan prog_a)];
         prog_b0 = pan_to_crep$compile_prog prog_a;
         ps = ps ++ [(«after pan_to_crep»,Crep prog_b0)];
@@ -124,7 +126,6 @@ Definition varkind_to_str_def:
 End
 
 Definition pan_exp_to_display_def:
-  (* #!TODO: NStruct, NField *)
   (pan_exp_to_display (panLang$Const v)
     = item_with_word (strlit "Const") v) ∧
   (pan_exp_to_display (Var vk n)
@@ -147,6 +148,10 @@ Definition pan_exp_to_display_def:
     = Item NONE (strlit "MemLoadByte") [pan_exp_to_display exp2]) ∧
   (pan_exp_to_display (RStruct xs)
     = Item NONE (strlit "RawStruct") (MAP pan_exp_to_display xs)) ∧
+  (pan_exp_to_display (NStruct nm fxs) (*#!DONE*)
+    = Item NONE (strlit "NamedStruct") (String nm::MAP (
+        \(f,x). Tuple [String f; String (strlit ":="); pan_exp_to_display x]) fxs
+      )) ∧
   (pan_exp_to_display (Cmp cmp x1 x2)
     = insert_es (asm_cmp_to_display cmp)
                 [pan_exp_to_display x1; pan_exp_to_display x2]) ∧
@@ -157,6 +162,8 @@ Definition pan_exp_to_display_def:
       | Mul => Item NONE (strlit "Mul") (MAP pan_exp_to_display xs)) ∧
   (pan_exp_to_display (RField n e)
     = Item NONE (strlit "RawField") [num_to_display n; pan_exp_to_display e]) ∧
+  (pan_exp_to_display (NField f e) (*#!TEST*)
+    = Item NONE (strlit "NamedField") [String f; pan_exp_to_display e]) ∧
   (pan_exp_to_display (Shift sh e n)
     = insert_es (shift_to_display sh) [pan_exp_to_display e; num_to_display n])
 End
@@ -217,8 +224,8 @@ Definition pan_prog_to_display_def:
            pan_prog_to_display p]) ∧
   (pan_prog_to_display (Dec n shape e p) =
      Item NONE (strlit "dec")
-          [Tuple [String (shape_to_str shape);
-                  String (strlit "local");
+          [Tuple [String (strlit "local");
+                  String (shape_to_str shape);
                   String n;
                   String (strlit ":=");
                   pan_exp_to_display e];
@@ -294,14 +301,14 @@ Definition pan_fun_to_display_def:
   pan_fun_to_display decl =
     case decl of
       Function fi => Tuple
-        [String (shape_to_str fi.return); String «func»; String fi.name;
+        [String «func»; String (shape_to_str fi.return); String fi.name;
         Tuple (MAP (λ(s,shape). Tuple [String s;
                                        String (strlit ":");
                                        String (shape_to_str shape)]) fi.params);
         pan_prog_to_display fi.body]
     | Decl sh nm exp => Tuple
-        [String (shape_to_str sh);
-         String (strlit "global");
+        [String (strlit "global");
+         String (shape_to_str sh);
          String nm;
          String (strlit ":=");
          pan_exp_to_display exp]
