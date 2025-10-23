@@ -191,17 +191,20 @@ Definition sh_bd_from_sh_def: (* #!DONE named *)
   sh_bd_from_sh sctxt b One = SOME $ WordB b /\
   sh_bd_from_sh sctxt b (Comb shs) =
     (case OPT_MMAP (sh_bd_from_sh sctxt b) shs of
-    | NONE => NONE (* should never happen #!TODO: better comment *)
-    | SOME sbs => SOME $ StructB sbs) /\
+    | SOME sbs => SOME $ StructB sbs
+    | NONE => NONE (* should never happen #!TODO: better comment *)) /\
   sh_bd_from_sh sctxt b (Named nm) =
     (case dropWhile (\(n,i). ~(n = nm)) sctxt of
-    | _ => NONE (* should never happen #!TODO: better comment *)
     | (nm,info)::sctxt' =>
       let (field_nms, field_shs) = UNZIP info.fields in
       (case OPT_MMAP (sh_bd_from_sh sctxt' b) field_shs of
       | NONE => NONE (* should never happen #!TODO: better comment *)
       | SOME field_sbs =>
-        SOME $ NamedB nm $ ZIP (field_nms, field_sbs)))
+        SOME $ NamedB nm $ ZIP (field_nms, field_sbs))
+    | _ => NONE (* should never happen #!TODO: better comment *))
+Termination
+  (* WF_REL_TAC ‘measure (shape_size o SND)’ *)
+  cheat
 End
 
 (* Builds a shaped based with the shape of a given shaped based and single based *)
