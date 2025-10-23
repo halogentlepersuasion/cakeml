@@ -24,9 +24,10 @@ Definition compile_exp_def:
   (compile_exp ctxt (RStruct es) = RStruct (MAP (compile_exp ctxt) es)) ∧
   (compile_exp ctxt (RField index e) =
    RField index (compile_exp ctxt e)) ∧
-  (compile_exp ctxt (NStruct nm flds) = NStruct nm (MAP (\(fld, e). (fld, compile_exp ctxt e)) flds)) ∧
+  (compile_exp ctxt (NStruct nm flds) =
+   Const 0w (* should never happen *)) ∧
   (compile_exp ctxt (NField fld e) =
-   NField fld (compile_exp ctxt e)) ∧
+   Const 0w (* should never happen *)) ∧
   (compile_exp ctxt (Load sh e) =
    Load sh (compile_exp ctxt e)) ∧
   (compile_exp ctxt (LoadByte e) =
@@ -68,6 +69,7 @@ End
 Definition shape_val_def:
   shape_val One = Const 0w ∧
   shape_val (Comb shapes) = RStruct (shape_vals shapes) ∧
+  shape_val (Named nm) = Const 0w (* should never happen *) ∧
   shape_vals [] = [] ∧
   shape_vals (sh::shs) = shape_val sh :: shape_vals shs
 End
@@ -173,7 +175,8 @@ Definition compile_decs_def:
         (Store (Op Sub [TopAddr; Const s]) (compile_exp ctxt e)::decs,funs,ctxt'')) ∧
     (compile_decs ctxt (Function fi::ds) =
      let (decs,funs,ctxt'') = compile_decs ctxt ds
-     in (decs,Function (fi with body := compile ctxt fi.body)::funs,ctxt''))
+     in (decs,Function (fi with body := compile ctxt fi.body)::funs,ctxt'')) ∧
+    (compile_decs ctxt (Name nm flds::ds) = ([],[],ctxt)) (* should never happen *)
 End
 
 Definition resort_decls_def:
@@ -228,6 +231,7 @@ End
 Definition dec_shapes_def:
   dec_shapes(Function _::ds) = dec_shapes ds ∧
   dec_shapes(Decl sh _ _::ds) = sh::dec_shapes ds ∧
+  dec_shapes(Name _ _::ds) = [] (* should never happen *) ∧
   dec_shapes [] = []
 End
 
