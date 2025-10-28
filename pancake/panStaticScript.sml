@@ -691,8 +691,9 @@ Definition check_id_shapes_def: (* #!DONE *)
     return () /\
   check_id_shapes sctxt loc scope is_arg ((id,shape)::ids) =
     do
-      id_desc <<- concat [strlit $
-        if is_arg then "parameter " else "field "; id; strlit " shape's "];
+      id_desc <<- concat [
+        if is_arg then strlit "parameter " else strlit "field ";
+        id; strlit " shape's "];
       scope_check_shape sctxt loc scope id_desc shape;
       check_id_shapes sctxt loc scope is_arg ids
     od

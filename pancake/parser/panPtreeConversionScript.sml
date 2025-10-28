@@ -350,7 +350,6 @@ Definition conv_Exp_def:
                    else if tokcheck leaf (kw TrueK) then SOME $ Const 1w
                    else if tokcheck leaf (kw FalseK) then SOME $ Const 0w
                    else conv_const leaf ++ conv_var leaf) ∧
-                  (* else NONE) ∧ *)
   conv_binaryExps [] e = SOME e ∧
   (conv_binaryExps (t1::t2::ts) res =
     do op <- conv_binop t1;
@@ -881,6 +880,7 @@ End
 
 Definition localise_topdec_def:
   localise_topdec ls (Decl sh v e) = Decl sh v e ∧
+  localise_topdec ls (Name nm fld) = Name nm fld ∧
   localise_topdec ls (Function fi) =
   Function $ fi with body := localise_prog (FOLDL (\m p. insert m p ()) ls (MAP FST fi.params)) fi.body
 End

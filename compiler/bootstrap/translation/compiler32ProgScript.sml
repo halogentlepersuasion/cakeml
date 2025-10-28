@@ -38,6 +38,7 @@ val res = translate $ panStaticTheory.sh_bd_from_bd_def;
 val res = translate $ panStaticTheory.sh_bd_has_shape_def;
 val res = translate $ panStaticTheory.sh_bd_eq_shapes_def;
 val res = translate $ panStaticTheory.index_sh_bd_def;
+val res = translate $ panStaticTheory.field_sh_bd_def;
 val res = translate $ panStaticTheory.based_merge_def;
 val res = translate $ panStaticTheory.sh_bd_branch_def;
 val res = translate $ panStaticTheory.branch_loc_inf_def;
@@ -59,10 +60,12 @@ val res = translate $ panStaticTheory.get_unreach_msg_def;
 val res = translate $ panStaticTheory.get_rogue_msg_def;
 val res = translate $ panStaticTheory.get_non_word_msg_def;
 val res = translate $ panStaticTheory.get_shape_mismatch_msg_def;
+val res = translate $ panStaticTheory.get_implementation_err_msg_def;
 
 val res = translate $ panStaticTheory.first_repeat_def;
 val res = translate $ panStaticTheory.binop_to_str_def;
 val res = translate $ panStaticTheory.panop_to_str_def;
+val res = translate $ panStaticTheory.sh_bd_to_str_def;
 
 val res = translate $ panStaticTheory.scope_check_fun_name_def;
 val res = translate $ panStaticTheory.scope_check_global_var_def;
@@ -71,11 +74,15 @@ val res = translate $ panStaticTheory.check_redec_var_def;
 val res = translate $ panStaticTheory.check_export_params_def;
 val res = translate $ panStaticTheory.check_operands_def;
 val res = translate $ panStaticTheory.check_func_args_def;
+val res = translate $ panStaticTheory.check_struct_fields_def;
+val res = translate $ panStaticTheory.scope_check_shape_def;
+val res = translate $ panStaticTheory.check_id_shapes_def;
 
 val res = translate $ spec32 $ panStaticTheory.static_check_exp_def;
 val res = translate $ spec32 $ panStaticTheory.static_check_prog_def;
 val res = translate $ spec32 $ panStaticTheory.static_check_progs_def;
 val res = translate $ spec32 $ panStaticTheory.static_check_decls_def;
+val res = translate $ spec32 $ panStaticTheory.static_check_names_def;
 val res = translate $ spec32 $ panStaticTheory.static_check_def;
 
 Definition max_heap_limit_32_def:

@@ -7,7 +7,7 @@ Ancestors
   pan_simp loopLang loop_remove loop_to_word pan_to_crep
   loop_call loop_live crep_arith crep_to_loop pan_to_word
   word_to_word backend pan_to_target panPtreeConversion
-  pan_globals
+  pan_globals pan_structs
 Libs
   preamble ml_translatorLib
 
@@ -138,6 +138,22 @@ val _ = translate $ conv32 ret_to_tail_def;
 val _ = translate $ conv32 compile_def;
 
 val _ = translate $ conv32 compile_prog_def;
+
+open pan_structsTheory;
+
+val _ = translate $ compile_shape_def;
+
+val _ = translate $ alookupi_def;
+
+val _ = translate $ conv32 compile_exp_def;
+
+val _ = translate $ conv32 compile_def;
+
+val _ = translate $ conv32 compile_decs_def;
+
+val _ = translate $ conv32 get_names_def;
+
+val _ = translate $ conv32 compile_top_def;
 
 open pan_globalsTheory;
 

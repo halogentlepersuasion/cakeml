@@ -81,9 +81,9 @@ Definition compile_exp_def:
     let sh' =
       case sh of
       | Comb shs =>
-        case LLOOKUP shs index of
+        (case LLOOKUP shs index of
         | SOME sh => sh
-        | NONE => One (* should never happen *)
+        | NONE => One (* should never happen *))
       | _ => One (* should never happen *) in
     (RField index e', sh')) ∧
   (compile_exp ctxt (NStruct nm eflds) =
@@ -204,9 +204,12 @@ Definition compile_decs_def:
       ctxt')) ∧
   (compile_decs ctxt (Function fi::ds) =
     let (ds', ctxt') = compile_decs ctxt ds in
-    let ctxt'' = ctxt' with locals := fi.params in
-    (Function (fi with body := compile ctxt'' fi.body) ::ds',
-      ctxt')) ∧
+    let params = fi.params in
+    let fi' = fi with <|
+        params updated_by (MAP (\(p,s). (p, compile_shape ctxt.structs s)))
+      ; body   updated_by (compile (ctxt' with locals := params))
+      ; return updated_by (compile_shape ctxt.structs) |> in
+    (Function fi'::ds', ctxt')) ∧
   (compile_decs ctxt (Name nm flds::ds) =
     compile_decs ctxt ds)
 End

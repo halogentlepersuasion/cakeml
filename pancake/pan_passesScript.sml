@@ -312,6 +312,13 @@ Definition pan_fun_to_display_def:
          String nm;
          String (strlit ":=");
          pan_exp_to_display exp]
+    | Name nm flds => Tuple
+        [String (strlit "struct");
+         String nm;
+        Tuple (MAP (λ(fld,shape).
+          Tuple [String fld;
+                  String (strlit ":");
+                  String (shape_to_str shape)]) flds)]
 End
 
 Definition pan_to_strs_def:

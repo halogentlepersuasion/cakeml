@@ -50,8 +50,8 @@ Definition compile_exp_def:
   (compile_exp ctxt (RField index e) =
    let (cexp, shape) = compile_exp ctxt e in
    case shape of
-   | One => ([Const 0w], One)
-   | Comb shapes => comp_field index shapes cexp) /\
+   | Comb shapes => comp_field index shapes cexp
+   | _ => ([Const 0w], One)) /\
   (compile_exp ctxt (NStruct nm flds) = ([Const 0w], One)) /\ (* should never happen *)
   (compile_exp ctxt (NField fld e) = ([Const 0w], One)) /\ (* should never happen *)
   (compile_exp ctxt (Load sh e) =

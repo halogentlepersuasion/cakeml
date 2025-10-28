@@ -244,7 +244,7 @@ Definition var_exp_def:
   (var_exp (Var Global v) = []) ∧
   (var_exp (RStruct es) = FLAT (MAP var_exp es)) ∧
   (var_exp (RField i e) = var_exp e) ∧
-  (var_exp (NStruct sn fes) = FLAT (MAP (var_exp o SND) fes)) ∧
+  (var_exp (NStruct sn fes) = FLAT (MAP var_exp (MAP SND fes))) ∧
   (var_exp (NField fld e) = var_exp e) ∧
   (var_exp (Load sh e) = var_exp e) ∧
   (var_exp (Load32 e) = var_exp e) ∧
@@ -258,10 +258,9 @@ Definition var_exp_def:
   (var_exp BytesInWord = [])
 Termination
   wf_rel_tac `measure (\e. exp_size ARB e)` >>
-  rpt strip_tac >>
-  imp_res_tac MEM_IMP_exp_size >>
-  TRY (first_x_assum (assume_tac o Q.SPEC `ARB`)) >>
-  decide_tac
+	simp[MEM_MAP, EXISTS_PROD] >>
+	rw [MEM_SPLIT] >>
+	simp [list_size_append]
 End
 
 Definition global_var_exp_def:
