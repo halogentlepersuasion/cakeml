@@ -117,7 +117,6 @@ val warns_ =
 *)
 
 
-
 (* General checks *)
 
 (* Error: Main function parameters *)
@@ -300,24 +299,6 @@ val static_rogue_continue =
 
 val warns_rogue_continue =
   check_static_no_warnings $ static_check_pancake parse_rogue_continue;
-
-
-(* Error: Function parameter names not distinct *)
-
-val ex_repeat_params = `
-  fun 1 f (1 a, 1 b, 1 c, 1 a) {
-    return 1;
-  }
-`;
-
-val parse_repeat_params =
-  check_parse_success $ parse_pancake ex_repeat_params;
-
-val static_repeat_params =
-  check_static_failure $ static_check_pancake parse_repeat_params;
-
-val warns_repeat_params =
-  check_static_no_warnings $ static_check_pancake parse_repeat_params;
 
 
 (* Error: Incorrect number of function arguments *)
@@ -1586,6 +1567,11 @@ val static_undefined_fun =
 val warns_undefined_fun =
   check_static_no_warnings $ static_check_pancake parse_undefined_fun;
 
+(* #!TODO
+    - Undefined/out-of-scope struct names
+out of scope struct in fields (out of order)
+out of scope struct in fun, param, local, global, constant (missing)
+ *)
 
 (* Error: Undefined/out-of-scope variables *)
 
@@ -1669,6 +1655,28 @@ val static_redefined_fun =
 val warns_redefined_fun =
   check_static_no_warnings $ static_check_pancake parse_redefined_fun;
 
+
+(* Error: Redefined function parameter names *)
+
+val ex_repeat_params = `
+  fun 1 f (1 a, 1 b, 1 c, 1 a) {
+    return 1;
+  }
+`;
+
+val parse_repeat_params =
+  check_parse_success $ parse_pancake ex_repeat_params;
+
+val static_repeat_params =
+  check_static_failure $ static_check_pancake parse_repeat_params;
+
+val warns_repeat_params =
+  check_static_no_warnings $ static_check_pancake parse_repeat_params;
+
+(* #!TODO
+    - Redefined struct names
+    - Redefined struct field names
+ *)
 
 (* Warning: Redefined variables *)
 
@@ -1798,7 +1806,8 @@ val warns_redefined_global_var_deccall =
 (* Shape checks *)
 
 
-(* Error: Mismatched variable declarations *)
+(* #!TODO Error: Mismatched variable declarations
+mismatch - word, diff rstruct, diff nstruct, equiv rstruct, equiv nstruct *)
 
 val ex_local_decl_word_match = `
   fun 1 f () {
@@ -1955,7 +1964,8 @@ val warns_global_decl_struct_mismatch_2 =
   check_static_no_warnings $ static_check_pancake parse_global_decl_struct_mismatch_2;
 
 
-(* Error: Mismatched variable assignments *)
+(* #!TODO Error: Mismatched variable assignments
+mismatch - word, diff rstruct, diff nstruct, equiv rstruct, equiv nstruct *)
 
 val ex_local_asgn_word_match = `
   fun 1 f () {
@@ -2047,7 +2057,8 @@ val warns_local_asgn_struct_mismatch_2 =
   check_static_no_warnings $ static_check_pancake parse_local_asgn_struct_mismatch_2;
 
 
-(* Error: Mismatched function arguments *)
+(* #!TODO Error: Mismatched function arguments
+mismatch - word, diff rstruct, diff nstruct, equiv rstruct, equiv nstruct *)
 
 val ex_func_arg_word_match = `
   fun 1 f () {
@@ -2149,7 +2160,8 @@ val warns_func_arg_struct_mismatch_2 =
   check_static_no_warnings $ static_check_pancake parse_func_arg_struct_mismatch_2;
 
 
-(* Error: Mismatched function returns *)
+(* #!TODO Error: Mismatched function returns
+mismatch - word, diff rstruct, diff nstruct, equiv rstruct, equiv nstruct *)
 
 val ex_func_ret_word_match = `
   fun 1 f () {
@@ -2230,262 +2242,15 @@ val static_func_ret_struct_mismatch_2 =
 val warns_func_ret_struct_mismatch_2 =
   check_static_no_warnings $ static_check_pancake parse_func_ret_struct_mismatch_2;
 
-
-(* Error: Non-word main function return declarations *)
-
-val ex_main_struct_ret = `
-  fun {1} main () {
-    return <1>;
-  }
-`;
-
-val parse_main_struct_ret =
-  check_parse_success $ parse_pancake ex_main_struct_ret;
-
-val static_main_struct_ret =
-  check_static_failure $ static_check_pancake parse_main_struct_ret;
-
-val warns_main_struct_ret =
-  check_static_no_warnings $ static_check_pancake parse_main_struct_ret;
-
-
-(* Error: Non-word FFI arguments *)
-
-val ex_ffi_struct_lit_arg = `
-  fun 1 f () {
-    @g(1, 2, 3, <4>);
-    return 1;
-  }
-`;
-
-val parse_ffi_struct_lit_arg =
-  check_parse_success $ parse_pancake ex_ffi_struct_lit_arg;
-
-val static_ffi_struct_lit_arg =
-  check_static_failure $ static_check_pancake parse_ffi_struct_lit_arg;
-
-val warns_ffi_struct_lit_arg =
-  check_static_no_warnings $ static_check_pancake parse_ffi_struct_lit_arg;
-
-
-val ex_ffi_struct_var_arg = `
-  fun 1 f () {
-    var {1} x = <0>;
-    @g(1, x, 3, 4);
-    return 1;
-  }
-`;
-
-val parse_ffi_struct_var_arg =
-  check_parse_success $ parse_pancake ex_ffi_struct_var_arg;
-
-val static_ffi_struct_var_arg =
-  check_static_failure $ static_check_pancake parse_ffi_struct_var_arg;
-
-val warns_ffi_struct_var_arg =
-  check_static_no_warnings $ static_check_pancake parse_ffi_struct_var_arg;
-
-
-(* Error: Non-word exported argument declarations *)
-
-val ex_export_struct_arg = `
-  export fun 1 f ({1} a) {
-    return 1;
-  }
-`;
-
-val parse_export_struct_arg =
-  check_parse_success $ parse_pancake ex_export_struct_arg;
-
-val static_export_struct_arg =
-  check_static_failure $ static_check_pancake parse_export_struct_arg;
-
-val warns_export_struct_arg =
-  check_static_no_warnings $ static_check_pancake parse_export_struct_arg;
-
-
-(* Error: Non-word exported return declarations *)
-
-val ex_export_struct_ret = `
-  export fun {1} f () {
-    return <1>;
-  }
-`;
-
-val parse_export_struct_ret =
-  check_parse_success $ parse_pancake ex_export_struct_ret;
-
-val static_export_struct_ret =
-  check_static_failure $ static_check_pancake parse_export_struct_ret;
-
-val warns_export_struct_ret =
-  check_static_no_warnings $ static_check_pancake parse_export_struct_ret;
-
-
-(* Error: Invalid field index *)
-
-val ex_valid_struct_lit_index = `
-  fun 1 f () {
-    var 1 x = <0>.0;
-    return 1;
-  }
-`;
-
-val parse_valid_struct_lit_index =
-  check_parse_success $ parse_pancake ex_valid_struct_lit_index;
-
-val static_valid_struct_lit_index =
-  check_static_success $ static_check_pancake parse_valid_struct_lit_index;
-
-val warns_valid_struct_lit_index =
-  check_static_no_warnings $ static_check_pancake parse_valid_struct_lit_index;
-
-
-val ex_valid_struct_var_index = `
-  fun 1 f () {
-    var {1} x = <0>;
-    var 1 y = x.0;
-    return 1;
-  }
-`;
-
-val parse_valid_struct_var_index =
-  check_parse_success $ parse_pancake ex_valid_struct_var_index;
-
-val static_valid_struct_var_index =
-  check_static_success $ static_check_pancake parse_valid_struct_var_index;
-
-val warns_valid_struct_var_index =
-  check_static_no_warnings $ static_check_pancake parse_valid_struct_var_index;
-
-
-val ex_invalid_struct_lit_index = `
-  fun 1 f () {
-    var 1 x = <0>.5;
-    return 1;
-  }
-`;
-
-val parse_invalid_struct_lit_index =
-  check_parse_success $ parse_pancake ex_invalid_struct_lit_index;
-
-val static_invalid_struct_lit_index =
-  check_static_failure $ static_check_pancake parse_invalid_struct_lit_index;
-
-val warns_invalid_struct_lit_index =
-  check_static_no_warnings $ static_check_pancake parse_invalid_struct_lit_index;
-
-
-val ex_invalid_struct_var_index = `
-  fun 1 f () {
-    var {1} x = <0>;
-    var 1 y = x.5;
-    return 1;
-  }
-`;
-
-val parse_invalid_struct_var_index =
-  check_parse_success $ parse_pancake ex_invalid_struct_var_index;
-
-val static_invalid_struct_var_index =
-  check_static_failure $ static_check_pancake parse_invalid_struct_var_index;
-
-val warns_invalid_struct_var_index =
-  check_static_no_warnings $ static_check_pancake parse_invalid_struct_var_index;
-
-
-val ex_invalid_word_var_index = `
-  fun 1 f () {
-    var 1 x = 0;
-    var 1 y = x.5;
-    return 1;
-  }
-`;
-
-val parse_invalid_word_var_index =
-  check_parse_success $ parse_pancake ex_invalid_word_var_index;
-
-val static_invalid_word_var_index =
-  check_static_failure $ static_check_pancake parse_invalid_word_var_index;
-
-val warns_invalid_word_var_index =
-  check_static_no_warnings $ static_check_pancake parse_invalid_word_var_index;
-
-
-(* Error: Non-word addresses for memory operations *)
-
-val ex_local_load_struct_addr = `
-  fun 1 f () {
-    var 1 x = lds 1 <1>;
-    return 1;
-  }
-`;
-
-val parse_local_load_struct_addr =
-  check_parse_success $ parse_pancake ex_local_load_struct_addr;
-
-val static_local_load_struct_addr =
-  check_static_failure $ static_check_pancake parse_local_load_struct_addr;
-
-val warns_local_load_struct_addr =
-  check_static_no_warnings $ static_check_pancake parse_local_load_struct_addr;
-
-
-val ex_local_store_struct_addr = `
-  fun 1 f () {
-    var 1 x = 1;
-    st <1>, x;
-    return 1;
-  }
-`;
-
-val parse_local_store_struct_addr =
-  check_parse_success $ parse_pancake ex_local_store_struct_addr;
-
-val static_local_store_struct_addr =
-  check_static_failure $ static_check_pancake parse_local_store_struct_addr;
-
-val warns_local_store_struct_addr =
-  check_static_no_warnings $ static_check_pancake parse_local_store_struct_addr;
-
-
-val ex_shared_load_struct_addr = `
-  fun 1 f () {
-    var 1 x = 1;
-    !ldw x, <1>;
-    return 1;
-  }
-`;
-
-val parse_shared_load_struct_addr =
-  check_parse_success $ parse_pancake ex_shared_load_struct_addr;
-
-val static_shared_load_struct_addr =
-  check_static_failure $ static_check_pancake parse_shared_load_struct_addr;
-
-val warns_shared_load_struct_addr =
-  check_static_no_warnings $ static_check_pancake parse_shared_load_struct_addr;
-
-
-val ex_shared_store_struct_addr = `
-  fun 1 f () {
-    var 1 x = 1;
-    !stw <1>, x;
-    return 1;
-  }
-`;
-
-val parse_shared_store_struct_addr =
-  check_parse_success $ parse_pancake ex_shared_store_struct_addr;
-
-val static_shared_store_struct_addr =
-  check_static_failure $ static_check_pancake parse_shared_store_struct_addr;
-
-val warns_shared_store_struct_addr =
-  check_static_no_warnings $ static_check_pancake parse_shared_store_struct_addr;
-
-
-(* Error: Mismatched source/destination for memory operations *)
+(* #!TODO
+    - Mismatched struct fields
+mismatch - word, diff rstruct, diff nstruct, equiv rstruct, equiv nstruct
+    - Incorrect number of struct field values
+extra field, missing field, duplicate field
+ *)
+
+(* #!TODO Error: Mismatched source/destination for memory operations
+mismatch - word, diff rstruct, diff nstruct, equiv rstruct, equiv nstruct *)
 
 val ex_local_lds_word_match = `
   fun 1 f () {
@@ -2661,7 +2426,171 @@ val warns_shared_stw_struct_src =
   check_static_no_warnings $ static_check_pancake parse_shared_stw_struct_src;
 
 
-(* Error: Non-word/mismatched operator operands *)
+(* #!TODO Error: Non-word main function return declarations *)
+
+val ex_main_struct_ret = `
+  fun {1} main () {
+    return <1>;
+  }
+`;
+
+val parse_main_struct_ret =
+  check_parse_success $ parse_pancake ex_main_struct_ret;
+
+val static_main_struct_ret =
+  check_static_failure $ static_check_pancake parse_main_struct_ret;
+
+val warns_main_struct_ret =
+  check_static_no_warnings $ static_check_pancake parse_main_struct_ret;
+
+
+(* #!TODO Error: Non-word FFI arguments *)
+
+val ex_ffi_struct_lit_arg = `
+  fun 1 f () {
+    @g(1, 2, 3, <4>);
+    return 1;
+  }
+`;
+
+val parse_ffi_struct_lit_arg =
+  check_parse_success $ parse_pancake ex_ffi_struct_lit_arg;
+
+val static_ffi_struct_lit_arg =
+  check_static_failure $ static_check_pancake parse_ffi_struct_lit_arg;
+
+val warns_ffi_struct_lit_arg =
+  check_static_no_warnings $ static_check_pancake parse_ffi_struct_lit_arg;
+
+
+val ex_ffi_struct_var_arg = `
+  fun 1 f () {
+    var {1} x = <0>;
+    @g(1, x, 3, 4);
+    return 1;
+  }
+`;
+
+val parse_ffi_struct_var_arg =
+  check_parse_success $ parse_pancake ex_ffi_struct_var_arg;
+
+val static_ffi_struct_var_arg =
+  check_static_failure $ static_check_pancake parse_ffi_struct_var_arg;
+
+val warns_ffi_struct_var_arg =
+  check_static_no_warnings $ static_check_pancake parse_ffi_struct_var_arg;
+
+
+(* #!TODO Error: Non-word exported argument declarations *)
+
+val ex_export_struct_arg = `
+  export fun 1 f ({1} a) {
+    return 1;
+  }
+`;
+
+val parse_export_struct_arg =
+  check_parse_success $ parse_pancake ex_export_struct_arg;
+
+val static_export_struct_arg =
+  check_static_failure $ static_check_pancake parse_export_struct_arg;
+
+val warns_export_struct_arg =
+  check_static_no_warnings $ static_check_pancake parse_export_struct_arg;
+
+
+(* #!TODO Error: Non-word exported return declarations *)
+
+val ex_export_struct_ret = `
+  export fun {1} f () {
+    return <1>;
+  }
+`;
+
+val parse_export_struct_ret =
+  check_parse_success $ parse_pancake ex_export_struct_ret;
+
+val static_export_struct_ret =
+  check_static_failure $ static_check_pancake parse_export_struct_ret;
+
+val warns_export_struct_ret =
+  check_static_no_warnings $ static_check_pancake parse_export_struct_ret;
+
+
+(* #!TODO Error: Non-word addresses for memory operations *)
+
+val ex_local_load_struct_addr = `
+  fun 1 f () {
+    var 1 x = lds 1 <1>;
+    return 1;
+  }
+`;
+
+val parse_local_load_struct_addr =
+  check_parse_success $ parse_pancake ex_local_load_struct_addr;
+
+val static_local_load_struct_addr =
+  check_static_failure $ static_check_pancake parse_local_load_struct_addr;
+
+val warns_local_load_struct_addr =
+  check_static_no_warnings $ static_check_pancake parse_local_load_struct_addr;
+
+
+val ex_local_store_struct_addr = `
+  fun 1 f () {
+    var 1 x = 1;
+    st <1>, x;
+    return 1;
+  }
+`;
+
+val parse_local_store_struct_addr =
+  check_parse_success $ parse_pancake ex_local_store_struct_addr;
+
+val static_local_store_struct_addr =
+  check_static_failure $ static_check_pancake parse_local_store_struct_addr;
+
+val warns_local_store_struct_addr =
+  check_static_no_warnings $ static_check_pancake parse_local_store_struct_addr;
+
+
+val ex_shared_load_struct_addr = `
+  fun 1 f () {
+    var 1 x = 1;
+    !ldw x, <1>;
+    return 1;
+  }
+`;
+
+val parse_shared_load_struct_addr =
+  check_parse_success $ parse_pancake ex_shared_load_struct_addr;
+
+val static_shared_load_struct_addr =
+  check_static_failure $ static_check_pancake parse_shared_load_struct_addr;
+
+val warns_shared_load_struct_addr =
+  check_static_no_warnings $ static_check_pancake parse_shared_load_struct_addr;
+
+
+val ex_shared_store_struct_addr = `
+  fun 1 f () {
+    var 1 x = 1;
+    !stw <1>, x;
+    return 1;
+  }
+`;
+
+val parse_shared_store_struct_addr =
+  check_parse_success $ parse_pancake ex_shared_store_struct_addr;
+
+val static_shared_store_struct_addr =
+  check_static_failure $ static_check_pancake parse_shared_store_struct_addr;
+
+val warns_shared_store_struct_addr =
+  check_static_no_warnings $ static_check_pancake parse_shared_store_struct_addr;
+
+
+(* #!TODO Error: Non-word/mismatched operator operands *)
 
 val ex_add_one_struct_operand = `
   fun 1 f () {
@@ -2759,7 +2688,7 @@ val warns_cmp_word_struct_operands =
   check_static_no_warnings $ static_check_pancake parse_cmp_word_struct_operands;
 
 
-(* Error: Non-word condition expressions *)
+(* #!TODO Error: Non-word condition expressions *)
 
 val ex_if_cond_struct = `
   fun 1 f () {
@@ -2799,7 +2728,102 @@ val warns_while_cond_struct =
   check_static_no_warnings $ static_check_pancake parse_while_cond_struct;
 
 
-(* Error: Returned shape size >32 words *)
+(* Error: Invalid field index *)
+
+val ex_valid_struct_lit_index = `
+  fun 1 f () {
+    var 1 x = <0>.0;
+    return 1;
+  }
+`;
+
+val parse_valid_struct_lit_index =
+  check_parse_success $ parse_pancake ex_valid_struct_lit_index;
+
+val static_valid_struct_lit_index =
+  check_static_success $ static_check_pancake parse_valid_struct_lit_index;
+
+val warns_valid_struct_lit_index =
+  check_static_no_warnings $ static_check_pancake parse_valid_struct_lit_index;
+
+
+val ex_valid_struct_var_index = `
+  fun 1 f () {
+    var {1} x = <0>;
+    var 1 y = x.0;
+    return 1;
+  }
+`;
+
+val parse_valid_struct_var_index =
+  check_parse_success $ parse_pancake ex_valid_struct_var_index;
+
+val static_valid_struct_var_index =
+  check_static_success $ static_check_pancake parse_valid_struct_var_index;
+
+val warns_valid_struct_var_index =
+  check_static_no_warnings $ static_check_pancake parse_valid_struct_var_index;
+
+
+val ex_invalid_struct_lit_index = `
+  fun 1 f () {
+    var 1 x = <0>.5;
+    return 1;
+  }
+`;
+
+val parse_invalid_struct_lit_index =
+  check_parse_success $ parse_pancake ex_invalid_struct_lit_index;
+
+val static_invalid_struct_lit_index =
+  check_static_failure $ static_check_pancake parse_invalid_struct_lit_index;
+
+val warns_invalid_struct_lit_index =
+  check_static_no_warnings $ static_check_pancake parse_invalid_struct_lit_index;
+
+
+val ex_invalid_struct_var_index = `
+  fun 1 f () {
+    var {1} x = <0>;
+    var 1 y = x.5;
+    return 1;
+  }
+`;
+
+val parse_invalid_struct_var_index =
+  check_parse_success $ parse_pancake ex_invalid_struct_var_index;
+
+val static_invalid_struct_var_index =
+  check_static_failure $ static_check_pancake parse_invalid_struct_var_index;
+
+val warns_invalid_struct_var_index =
+  check_static_no_warnings $ static_check_pancake parse_invalid_struct_var_index;
+
+
+val ex_invalid_word_var_index = `
+  fun 1 f () {
+    var 1 x = 0;
+    var 1 y = x.5;
+    return 1;
+  }
+`;
+
+val parse_invalid_word_var_index =
+  check_parse_success $ parse_pancake ex_invalid_word_var_index;
+
+val static_invalid_word_var_index =
+  check_static_failure $ static_check_pancake parse_invalid_word_var_index;
+
+val warns_invalid_word_var_index =
+  check_static_no_warnings $ static_check_pancake parse_invalid_word_var_index;
+
+
+(* #!TODO Error: Invalid field name
+invalid field (missing named, raw/named mismatch) *)
+
+
+(* #!TODO Error: Returned shape size >32 words
+return size (all in one, split across multiple) *)
 
 val ex_big_var = `
   fun 1 f () {
@@ -2834,7 +2858,7 @@ val warns_big_func_ret =
   check_static_no_warnings $ static_check_pancake parse_big_func_ret;
 
 
-(* Misc: Default shape behaviour *)
+(* Misc: #!TODO Default shape behaviour *)
 
 val ex_default_all_good = `
   var n = 1;
