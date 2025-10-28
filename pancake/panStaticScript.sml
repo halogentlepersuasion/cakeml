@@ -1,15 +1,6 @@
 (*
   Static checking for Pancake.
 
-  Scope checks:
-  - Errors:
-    - Undefined/out-of-scope functions
-    - Undefined/out-of-scope variables
-    - Undefined/out-of-scope struct names
-    - Redefined functions
-  - Warnings:
-    - Redefined variables
-
   General checks:
   - Errors:
     - Main function parameters
@@ -17,7 +8,6 @@
     - Exported function with >4 arguments
     - Missing function exit (return, tail call, etc)
     - Loop exit outside loop (break, continue)
-    - Function parameter names not distinct
     - Incorrect number of function arguments
     - Incorrect number of Op arguments (impossible from parser)
   - Warnings:
@@ -30,21 +20,36 @@
     - Base-calculated address in shared memory operation
     - Non-base -calculated address in local memory operation
 
+  Scope checks:
+  - Errors:
+    - Undefined/out-of-scope functions
+    - Undefined/out-of-scope variables
+    - Undefined/out-of-scope struct names
+    - Redefined functions
+    - Redefined function parameter names
+    - Redefined struct names
+    - Redefined struct field names
+  - Warnings:
+    - Redefined variables
+
   Shape checks:
   - Errors:
     - Mismatched variable declarations
     - Mismatched variable assignments
     - Mismatched function arguments
     - Mismatched function returns
+    - Mismatched struct fields
+    - Incorrect number of struct field values
+    - Mismatched source/destination for memory operations
     - Non-word main function return declarations
     - Non-word FFI arguments
     - Non-word exported argument declarations
     - Non-word exported return declarations
-    - Invalid field index
     - Non-word addresses for memory operations
-    - Mismatched source/destination for memory operations
     - Non-word/mismatched operator operands
     - Non-word condition expressions
+    - Invalid field index
+    - Invalid field name
     - Returned shape size >32 words (TODO: raised shape size)
 *)
 Theory panStatic
@@ -404,7 +409,7 @@ Definition get_scope_msg_def: (* #!DONE *)
       case id_type of
       | Var => strlit "variable "
       | Fun => strlit "function "
-      | Stc => strlit "struct name " in
+      | Stc => strlit " struct name " in
     concat [loc; id_desc; id;
       strlit " is not in scope in ";
       get_scope_desc scope; strlit "\n"]
@@ -675,8 +680,8 @@ Definition scope_check_shape_def: (* #!DONE *)
     scope_check_shapes sctxt loc scope desc shs /\
   scope_check_shape sctxt loc scope desc (Named nm) =
     (case ALOOKUP sctxt nm of
-    | SOME flds => return ()
-    | NONE => error (ScopeErr $ concat [desc; get_scope_msg Stc nm loc scope])) /\
+    | SOME flds => return () (* #!TODO get the description before the loc *)
+    | NONE => error (ScopeErr $ concat [desc; get_scope_msg Stc loc nm scope])) /\
   scope_check_shapes sctxt loc scope desc [] = return () /\
   scope_check_shapes sctxt loc scope desc (sh::shs) =
     do
@@ -754,7 +759,7 @@ Definition static_check_exp_def:
       sinfo <-
         case ALOOKUP ctxt.structs nm of
         | SOME info => return info
-        | NONE => error (ScopeErr $ get_scope_msg Stc nm ctxt.loc ctxt.scope);
+        | NONE => error (ScopeErr $ get_scope_msg Stc ctxt.loc nm ctxt.scope);
       (* check struct field exps *)
       (field_names, field_exps) <<- UNZIP eflds;
       esret <- static_check_exps ctxt field_exps;
@@ -1550,7 +1555,7 @@ Definition static_check_decls_def:
     do
       (* check for redeclaration *)
       if member fi.name fctxt
-        then error (GenErr $ get_redec_msg Fun (strlit "") fi.name TopLevel) (* #!TODO decl locs *)
+        then error (ScopeErr $ get_redec_msg Fun (strlit "") fi.name TopLevel) (* #!TODO decl locs *)
       else return ();
       (* check main func *)
       if fi.name = «main»
@@ -1574,7 +1579,7 @@ Definition static_check_decls_def:
         do
           (* check arg name uniqueness *)
           case first_repeat $ sort mlstring_lt (MAP FST fi.params) of
-            SOME p => error (GenErr $ concat
+            SOME p => error (ScopeErr $ concat
               [strlit "parameter "; p; strlit " is redeclared in function ";
               fi.name; strlit "\n"])
           | NONE => return ();
@@ -1628,11 +1633,11 @@ Definition static_check_names_def: (* #!DONE *)
   static_check_names sctxt (Name nm flds::decls) =
     do
       case ALOOKUP sctxt nm of
-      | SOME info => error (GenErr $ get_redec_msg Stc (strlit "") nm TopLevel)
+      | SOME info => error (ScopeErr $ get_redec_msg Stc (strlit "") nm TopLevel)
       | NONE => return ();
       (* check field name uniqueness *)
       case first_repeat $ sort mlstring_lt (MAP FST flds) of
-        SOME fld => error (GenErr $ concat
+        SOME fld => error (ScopeErr $ concat
           [strlit "field "; fld; strlit " is redeclared in struct name ";
           nm; strlit "\n"])
       | NONE => return ();

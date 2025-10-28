@@ -174,7 +174,7 @@ Definition eval_def:
     (case ALOOKUP s.structs nm of
       | SOME info =>
         let (field_names', field_shapes) = UNZIP info.fields in
-        if field_names' = field_names then
+        if field_names' = field_names then (* assumed sorted *)
           case (OPT_MMAP (eval s) field_exps) of
           | SOME field_vals =>
             if EVERY (\(s,v). s = shape_of v) (ZIP (field_shapes, field_vals)) then
