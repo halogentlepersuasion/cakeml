@@ -579,6 +579,10 @@ val named_structs =
     1 value
   }
 
+  struct my_other_struct {
+    my_struct s
+  }
+
   fun my_struct f(my_struct a) {
     return my_struct <tuple = a.tuple, value = a.value>;
   }

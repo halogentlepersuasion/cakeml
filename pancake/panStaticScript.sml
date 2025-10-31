@@ -142,9 +142,9 @@ End
 
 Datatype:
   scope =
-    FunScope  funname   (* in a function *)
-  | DeclScope varname   (* in a global declaration *)
-  | StcScope  stcname   (* in a struct name declaration *)
+    FunScope  funname mlstring  (* in a function, possibly more specific *)
+  | DeclScope varname           (* in a global declaration *)
+  | StcScope  stcname fldname   (* in a struct name declaration *)
   | TopLevel
 End
 
@@ -385,12 +385,12 @@ End
 Definition get_scope_desc_def:
   get_scope_desc scope =
     case scope of
-    | FunScope fname =>
-      concat [strlit "function "; fname]
+    | FunScope fname desc =>
+      concat [strlit "function "; fname; desc]
     | DeclScope vname =>
       concat [strlit "initialisation of global variable "; vname]
-    | StcScope sname =>
-      concat [strlit "field declaration of named struct "; sname]
+    | StcScope sname fld =>
+      concat [strlit "declaration of field "; fld; strlit " in named struct "; sname]
     | TopLevel =>
       strlit "top-level declaration"
 End
@@ -409,7 +409,7 @@ Definition get_scope_msg_def: (* #!DONE *)
       case id_type of
       | Var => strlit "variable "
       | Fun => strlit "function "
-      | Stc => strlit " struct name " in
+      | Stc => strlit "struct name " in
     concat [loc; id_desc; id;
       strlit " is not in scope in ";
       get_scope_desc scope; strlit "\n"]
@@ -491,7 +491,7 @@ End
 Definition get_non_word_msg_def:
   get_non_word_msg desc sh_str loc scope =
     concat
-      [loc; desc; strlit " is "; sh_str; strlit " instead of a word in ";
+      [loc; desc; strlit " has shape "; sh_str; strlit " instead of a word in ";
         get_scope_desc scope; strlit "\n"]
 End
 
@@ -590,14 +590,14 @@ End
 
 (* Check shapes of exported arguments *)
 Definition check_export_params_def:
-  check_export_params fname [] = return () /\
-  check_export_params fname ((vname,shape)::ps) =
+  check_export_params loc scope [] = return () /\
+  check_export_params loc scope ((vname,shape)::ps) =
     if ~(shape = One)
-      then error (ShapeErr $ concat
-        [strlit "exported function "; fname;
-        strlit " has non-word argument " ; vname; strlit "\n"])
+      then error (ShapeErr $ get_non_word_msg (
+          concat [strlit "exported function parameter "; vname]
+        ) (shape_to_str shape) loc scope)
     else
-      check_export_params fname ps
+      check_export_params loc scope ps
 End
 
 (* Check operand shape and return merged shaped basedness *)
@@ -675,32 +675,33 @@ End
 
 
 Definition scope_check_shape_def: (* #!DONE *)
-  scope_check_shape sctxt loc scope desc One = return () /\
-  scope_check_shape sctxt loc scope desc (Comb shs) =
-    scope_check_shapes sctxt loc scope desc shs /\
-  scope_check_shape sctxt loc scope desc (Named nm) =
+  scope_check_shape sctxt loc scope One = return () /\
+  scope_check_shape sctxt loc scope (Comb shs) =
+    scope_check_shapes sctxt loc scope shs /\
+  scope_check_shape sctxt loc scope (Named nm) =
     (case ALOOKUP sctxt nm of
-    | SOME flds => return () (* #!TODO get the description before the loc *)
-    | NONE => error (ScopeErr $ concat [desc; get_scope_msg Stc loc nm scope])) /\
-  scope_check_shapes sctxt loc scope desc [] = return () /\
-  scope_check_shapes sctxt loc scope desc (sh::shs) =
+    | SOME flds => return ()
+    | NONE => error (ScopeErr $ get_scope_msg Stc loc nm scope)) /\
+  scope_check_shapes sctxt loc scope [] = return () /\
+  scope_check_shapes sctxt loc scope (sh::shs) =
     do
-      scope_check_shape sctxt loc scope desc sh;
-      scope_check_shapes sctxt loc scope desc shs
+      scope_check_shape sctxt loc scope sh;
+      scope_check_shapes sctxt loc scope shs
     od
 End
 
 (* Check for field/param shape *)
 Definition check_id_shapes_def: (* #!DONE *)
-  check_id_shapes sctxt loc scope is_arg [] =
+  check_id_shapes sctxt loc scope [] =
     return () /\
-  check_id_shapes sctxt loc scope is_arg ((id,shape)::ids) =
+  check_id_shapes sctxt loc scope ((id,shape)::ids) =
     do
-      id_desc <<- concat [
-        if is_arg then strlit "parameter " else strlit "field ";
-        id; strlit " shape's "];
-      scope_check_shape sctxt loc scope id_desc shape;
-      check_id_shapes sctxt loc scope is_arg ids
+      scope' <<-
+        case scope of
+        | FunScope fname _ => FunScope fname (concat [strlit " parameter "; id])
+        | StcScope sname _ => StcScope sname id;
+      scope_check_shape sctxt loc scope' shape;
+      check_id_shapes sctxt loc scope ids
     od
 End
 
@@ -783,7 +784,7 @@ Definition static_check_exp_def:
   static_check_exp ctxt (Load shape addr) =
     do
       (* check shape *) (* #!DONE: is_wf_shape *)
-      scope_check_shape ctxt.structs ctxt.loc ctxt.scope (strlit "loaded shape's ") shape;
+      scope_check_shape ctxt.structs ctxt.loc ctxt.scope shape;
       (* check addr exp *)
       aret <- static_check_exp ctxt addr;
       (* check address shape and references base *)
@@ -942,7 +943,7 @@ Definition static_check_prog_def:
       (* check for redeclaration *)
       check_redec_var ctxt v;
       (* check shape *) (* #!DONE: is_wf_shape *)
-      scope_check_shape ctxt.structs ctxt.loc ctxt.scope (strlit "local variable shape's ") s;
+      scope_check_shape ctxt.structs ctxt.loc ctxt.scope s;
       (* check initialising exp *)
       eret <- static_check_exp ctxt e;
       (* check for shape match *)
@@ -1047,10 +1048,10 @@ Definition static_check_prog_def:
       esret <- static_check_exps ctxt args;
       (* check for shape match *)
       if ~(sh_bd_has_shape finf.ret_shape vinf.vsh_bd)
-        then error (ShapeErr $ concat
-          [ctxt.loc; strlit "call result assigned to local variable "; rt;
-           strlit " does not match declared shape in ";
-           get_scope_desc ctxt.scope; strlit "\n"])
+        then error (ShapeErr $ get_shape_mismatch_msg (
+            concat [strlit "call result assigned to local variable "; rt
+            ]) (shape_to_str finf.ret_shape) (sh_bd_to_str vinf.vsh_bd)
+            ctxt.loc ctxt.scope)
       else return ();
       (* check arg num and shapes *)
       check_func_args ctxt trgt finf.params esret.sh_bds;
@@ -1080,10 +1081,10 @@ Definition static_check_prog_def:
       esret <- static_check_exps ctxt args;
       (* check for shape match *)
       if ~(vinf.vshape = finf.ret_shape)
-        then error (ShapeErr $ concat
-          [ctxt.loc; strlit "call result assigned to global variable "; rt;
-           strlit " does not match declared shape in ";
-           get_scope_desc ctxt.scope; strlit "\n"])
+        then error (ShapeErr $ get_shape_mismatch_msg (
+            concat [strlit "call result assigned to global variable "; rt
+            ]) (shape_to_str finf.ret_shape) (shape_to_str vinf.vshape)
+            ctxt.loc ctxt.scope)
       else return ();
       (* check arg num and shapes *)
       check_func_args ctxt trgt finf.params esret.sh_bds;
@@ -1111,7 +1112,7 @@ Definition static_check_prog_def:
       (* lookup current function info *)
       finf <-
         case ctxt.scope of
-        | FunScope fname => scope_check_fun_name ctxt fname
+        | FunScope fname _ => scope_check_fun_name ctxt fname
         (* should never occur if static checker implemented correctly *)
         | _ => error (GenErr $ get_implementation_err_msg
           (strlit "return found outside function scope")
@@ -1134,7 +1135,7 @@ Definition static_check_prog_def:
     do
       (* lookup current function info *)
       finf <- case ctxt.scope of
-        | FunScope fname => scope_check_fun_name ctxt fname
+        | FunScope fname _ => scope_check_fun_name ctxt fname
         (* should never occur if static checker implemented correctly *)
         | _ => error (GenErr $ strlit "tail call found outside function scope");
       (* check func ptr exp and arg exps *)
@@ -1486,7 +1487,7 @@ Definition static_check_progs_def:
         (* should never occur if static checker implemented correctly *)
         | NONE => error (ScopeErr $ get_implementation_err_msg
           (strlit "static analysis failed to convert in-scope shape")
-          (strlit "") (FunScope fi.name))
+          (strlit "") (FunScope fi.name (strlit "")))
         (* return exp info with stored shape *)
         | SOME sbs => return $ ZIP (param_names, sbs);
       (* setup initial checking context *)
@@ -1494,7 +1495,7 @@ Definition static_check_progs_def:
                 ; globals := gctxt
                 ; funcs := fctxt
                 ; structs := sctxt
-                ; scope := FunScope fi.name
+                ; scope := FunScope fi.name (strlit "")
                 ; in_loop := F
                 ; is_reachable := IsReach
                 ; last := InvisLast
@@ -1505,7 +1506,7 @@ Definition static_check_progs_def:
       if ~(prog_ret.exits_fun)
         then error (GenErr $ concat
           [strlit "branches missing return statement in ";
-           get_scope_desc (FunScope fi.name); strlit "\n"])
+           get_scope_desc (FunScope fi.name (strlit "")); strlit "\n"])
       else return ();
       (* check remaining functions *)
       static_check_progs fctxt gctxt sctxt decls
@@ -1538,15 +1539,15 @@ Definition static_check_decls_def:
       (* check for redeclaration *)
       check_redec_var (ctxt with scope := TopLevel) vname;
       (* check shape *) (* #!DONE: is_wf_shape *)
-      scope_check_shape sctxt (strlit "") TopLevel
-        (strlit "global variable shape's ") shape; (* #!TODO decl locs*)
+      scope_check_shape sctxt (strlit "") ctxt.scope shape; (* #!TODO decl locs*)
       (* check initialisation expression *)
       eret <- static_check_exp ctxt exp;
       (* check for shape match *)
       if ~(sh_bd_has_shape shape eret.sh_bd)
-        then error (ShapeErr $ concat
-          [strlit "expression to initialise global variable "; vname;
-           strlit " does not match declared shape\n"])
+        then error (ShapeErr $ get_shape_mismatch_msg (concat [
+            strlit "expression to initialise global variable "; vname
+          ]) (sh_bd_to_str eret.sh_bd) (shape_to_str shape)
+          (strlit "") ctxt.scope)
       else return ();
       (* check remaining decls *)
       static_check_decls fctxt (insert gctxt vname <| vshape := shape |>) sctxt decls
@@ -1572,7 +1573,7 @@ Definition static_check_decls_def:
           if ~(fi.return = One)
             then error (ShapeErr $ get_non_word_msg
               (strlit "main function return") (shape_to_str fi.return)
-              (strlit "") (FunScope fi.name))
+              (strlit "") (FunScope fi.name (strlit "")))
           else return ();
         od
       else
@@ -1593,20 +1594,19 @@ Definition static_check_decls_def:
                   strlit " has more than 4 arguments\n"])
               else return ();
               (* check exported func arg shape *)
-              check_export_params fi.name fi.params;
+              check_export_params (strlit "") (FunScope fi.name (strlit "")) fi.params;
               (* check exported func return shape *)
               if ~(fi.return = One)
                 then error (ShapeErr $ get_non_word_msg
                   (strlit "exported function return") (shape_to_str fi.return)
-                  (strlit "") (FunScope fi.name))
+                  (strlit "") (FunScope fi.name (strlit "")))
               else return ();
             od
           else (* #!DONE: is_wf_shape for params and return *)
             (* check arg shapes *)
-            check_id_shapes sctxt (strlit "") (FunScope fi.name) T fi.params; (* #!TODO decl locs*)
+            check_id_shapes sctxt (strlit "") (FunScope fi.name (strlit "")) fi.params; (* #!TODO decl locs*)
             (* check return shape *)
-            scope_check_shape sctxt (strlit "") (FunScope fi.name)
-              (strlit "function return shape's ") fi.return;
+            scope_check_shape sctxt (strlit "") (FunScope fi.name (strlit " return")) fi.return;
             (* check func return shape size *)
             if size_of_sh_with_ctxt sctxt fi.return > 32
               then error (ShapeErr $ concat
@@ -1641,7 +1641,7 @@ Definition static_check_names_def: (* #!DONE *)
           [strlit "field "; fld; strlit " is redeclared in struct name ";
           nm; strlit "\n"])
       | NONE => return ();
-      check_id_shapes sctxt (strlit "") (StcScope nm) F flds; (* #!TODO decl locs *)
+      check_id_shapes sctxt (strlit "") (StcScope nm (strlit "")) flds; (* #!TODO decl locs *)
       info <<- <| fields := flds
                 ; size := size_of_sh_with_ctxt sctxt (Comb $ MAP SND flds) |>;
       static_check_names ((nm,info)::sctxt) decls
