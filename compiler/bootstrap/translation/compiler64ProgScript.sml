@@ -88,15 +88,15 @@ val res = translate $ panStaticTheory.sh_bd_to_str_def;
 
 val res = translate $ alistTheory.ADELKEY_def;
 
-val res = translate $ panStaticTheory.scope_check_fun_name_def;
-val res = translate $ panStaticTheory.scope_check_global_var_def;
-val res = translate $ panStaticTheory.scope_check_local_var_def;
+val res = translate $ panStaticTheory.check_fun_name_def;
+val res = translate $ panStaticTheory.check_global_var_def;
+val res = translate $ panStaticTheory.check_local_var_def;
 val res = translate $ panStaticTheory.check_redec_var_def;
 val res = translate $ panStaticTheory.check_export_params_def;
 val res = translate $ panStaticTheory.check_operands_def;
 val res = translate $ panStaticTheory.check_func_args_def;
 val res = translate $ panStaticTheory.check_struct_fields_def;
-val res = translate $ panStaticTheory.scope_check_shape_def;
+val res = translate $ panStaticTheory.check_shape_def;
 val res = translate $ panStaticTheory.check_id_shapes_def;
 
 val res = translate $ spec64 $ panStaticTheory.static_check_exp_def;

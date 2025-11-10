@@ -143,7 +143,7 @@ open pan_structsTheory;
 
 val _ = translate $ compile_shape_def;
 
-val _ = translate $ alookupi_def;
+val _ = translate $ afindi_def;
 
 val _ = translate $ conv32 compile_exp_def;
 

@@ -171,11 +171,11 @@ End
 
 Definition shape_to_str_def:
   shape_to_str One = strlit "1" ∧
-  shape_to_str (Comb []) = strlit "<>" ∧
+  shape_to_str (Comb []) = strlit "{}" ∧ (* should never happen *)
   shape_to_str (Comb (x::xs)) =
-    concat (strlit "<" :: shape_to_str x ::
+    concat (strlit "{" :: shape_to_str x ::
             MAP (λx. strlit "," ^ x) (MAP shape_to_str xs) ++
-            [strlit ">"]) ∧
+            [strlit "}"]) ∧
   shape_to_str (Named nm) = nm
 End
 
