@@ -33,6 +33,7 @@ val res = translate $ errorLogMonadTheory.bind_def;
 val res = translate $ errorLogMonadTheory.log_def;
 val res = translate $ errorLogMonadTheory.error_def;
 
+val res = translate $ listTheory.OPT_MMAP_def;
 val res = translate_no_ind panStaticTheory.sh_bd_from_sh_def;
 
 Triviality panstatic_sh_bd_from_sh_ind:
